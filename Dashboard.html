@@ -1,0 +1,753 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard de Checklist Fluvial</title>
+  <!-- Bootstrap CSS -->
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/css/bootstrap.min.css" rel="stylesheet">
+  <!-- Chart.js -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f8f9fa;
+      padding: 20px;
+    }
+    .dashboard-header {
+      background-color: #4F8A50;
+      color: white;
+      padding: 15px;
+      border-radius: 5px;
+      margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .dashboard-header img {
+      height: 40px;
+      margin-right: 15px;
+    }
+    .dashboard-card {
+      background-color: white;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      margin-bottom: 20px;
+      padding: 15px;
+      transition: transform 0.3s ease;
+    }
+    .dashboard-card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+    }
+    .card-header {
+      border-bottom: 1px solid #e5e5e5;
+      padding-bottom: 10px;
+      margin-bottom: 15px;
+      font-weight: bold;
+      color: #4F8A50;
+    }
+    .chart-container {
+      position: relative;
+      height: 300px;
+      width: 100%;
+    }
+    .table-container {
+      max-height: 300px;
+      overflow-y: auto;
+    }
+    .table-dashboard {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    .table-dashboard th {
+      position: sticky;
+      top: 0;
+      background-color: #f8f9fa;
+      z-index: 10;
+    }
+    .table-dashboard th, .table-dashboard td {
+      padding: 8px;
+      text-align: left;
+      border-bottom: 1px solid #ddd;
+    }
+    .status-pendente {
+      color: #ffc107;
+    }
+    .status-completo {
+      color: #28a745;
+    }
+    .status-nao {
+      color: #dc3545;
+    }
+    .filters {
+      margin-bottom: 20px;
+      padding: 15px;
+      background-color: white;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    .filters label {
+      margin-right: 10px;
+      font-weight: bold;
+    }
+    .filters select {
+      margin-right: 20px;
+    }
+    @media (max-width: 768px) {
+      .chart-container {
+        height: 250px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="dashboard-header">
+    <div>
+      <img src="https://www.jirauenergia.com.br/wp-content/uploads/2021/06/cropped-logo-jirau-energia-1-1.png" alt="Jirau Energia">
+    </div>
+    <h1>Dashboard de Checklist Fluvial</h1>
+    <div></div>
+  </div>
+
+  <div class="filters">
+    <div class="row">
+      <div class="col-md-4">
+        <label for="filtroData">Filtrar por Data:</label>
+        <select id="filtroData" class="form-select">
+          <option value="todas">Todas as datas</option>
+          <!-- Será preenchido via JavaScript -->
+        </select>
+      </div>
+      <div class="col-md-4">
+        <label for="filtroPiloto">Filtrar por Piloto:</label>
+        <select id="filtroPiloto" class="form-select">
+          <option value="todos">Todos os pilotos</option>
+          <!-- Será preenchido via JavaScript -->
+        </select>
+      </div>
+      <div class="col-md-4">
+        <label for="filtroLocal">Filtrar por Local:</label>
+        <select id="filtroLocal" class="form-select">
+          <option value="todos">Todos os locais</option>
+          <!-- Será preenchido via JavaScript -->
+        </select>
+      </div>
+    </div>
+  </div>
+  
+  <div class="row">
+    <!-- Gráfico de Inspetores -->
+    <div class="col-md-6">
+      <div class="dashboard-card">
+        <div class="card-header">Inspetores por Quantidade de Checklists</div>
+        <div class="chart-container">
+          <canvas id="chartInspetores"></canvas>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Gráfico de Pilotos -->
+    <div class="col-md-6">
+      <div class="dashboard-card">
+        <div class="card-header">Pilotos por Quantidade de Missões</div>
+        <div class="chart-container">
+          <canvas id="chartPilotos"></canvas>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Gráfico de Locais -->
+    <div class="col-md-6">
+      <div class="dashboard-card">
+        <div class="card-header">Locais Mais Visitados</div>
+        <div class="chart-container">
+          <canvas id="chartLocais"></canvas>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Gráfico de Horários -->
+    <div class="col-md-6">
+      <div class="dashboard-card">
+        <div class="card-header">Horários das Operações</div>
+        <div class="chart-container">
+          <canvas id="chartHorarios"></canvas>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Gráfico de Status das Operações -->
+    <div class="col-md-6">
+      <div class="dashboard-card">
+        <div class="card-header">Status das Operações</div>
+        <div class="chart-container">
+          <canvas id="chartStatus"></canvas>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Gráfico de Itens Problemáticos -->
+    <div class="col-md-6">
+      <div class="dashboard-card">
+        <div class="card-header">Itens com Problemas (Não ou Não Preenchidos)</div>
+        <div class="chart-container">
+          <canvas id="chartItensProblematicos"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Tabela de Materiais Pendentes -->
+  <div class="dashboard-card">
+    <div class="card-header">Lista de Materiais Pendentes</div>
+    <div class="table-container">
+      <table id="tabelaPendentes" class="table-dashboard">
+        <thead>
+          <tr>
+            <th>Data</th>
+            <th>Local</th>
+            <th>Piloto</th>
+            <th>Item</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          <!-- Será preenchido via JavaScript -->
+        </tbody>
+      </table>
+    </div>
+  </div>
+  
+  <!-- Resumo das Atividades -->
+  <div class="dashboard-card">
+    <div class="card-header">Resumo das Atividades</div>
+    <div class="row">
+      <div class="col-md-3">
+        <div class="card mb-3 text-center">
+          <div class="card-body">
+            <h3 id="totalChecklists">0</h3>
+            <p>Total de Checklists</p>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <div class="card mb-3 text-center">
+          <div class="card-body">
+            <h3 id="totalPilotos">0</h3>
+            <p>Pilotos Envolvidos</p>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <div class="card mb-3 text-center">
+          <div class="card-body">
+            <h3 id="totalLocais">0</h3>
+            <p>Locais Diferentes</p>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <div class="card mb-3 text-center">
+          <div class="card-body">
+            <h3 id="percentualConcluido">0%</h3>
+            <p>Itens Concluídos (SIM)</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/js/bootstrap.bundle.min.js"></script>
+  <script>
+
+
+    // Dados de exemplo (seriam substituídos pelos dados reais da planilha)
+    // Na versão real, isso seria carregado da sua planilha
+    const dadosExample = {
+      registros: [
+        {
+          data: "15/03/2025",
+          hora: "08:30",
+          responsavelNome: "Airton Pedrozo",
+          pilotoNome: "Kaique Lopes Dos Santos",
+          dataOperacao: "16/03/2025",
+          horaOperacao: "09:00",
+          statusOperacao: "Pendente",
+          localAlvo: "Rio Madeira - Trecho Norte",
+          localInicio: "Porto Principal",
+          tempoDuracao: "4 horas",
+          inspetor1: "Clemerson S",
+          inspetor2: "Airton Pedrozo",
+          itensChecklist: {
+            "Teste do motor da embarcação": "SIM",
+            "Mangueira de abastecimento": "SIM",
+            "Combustível reserva": "SIM",
+            "Âncora": "NÃO",
+            "Hélice Reserva": "SIM",
+            "Doc. Da Embarcação": "SIM",
+            "Óleo náutico": "não_preenchido",
+            "Doc. Do Reboque": "SIM",
+            "Bujão Principal": "SIM",
+            "Remos": "SIM",
+            "Chave ignição": "SIM",
+            "Boia circular": "SIM",
+            "Coletes salva vidas": "SIM",
+            "Telefone satelital": "NÃO",
+            "Cilibrim": "SIM",
+            "Kit basico ferramenta": "SIM",
+            "Corrente com cadeados": "SIM"
+          }
+        },
+        {
+          data: "16/03/2025",
+          hora: "09:15",
+          responsavelNome: "Airton Pedrozo",
+          pilotoNome: "Lucas Silva Corres",
+          dataOperacao: "17/03/2025",
+          horaOperacao: "10:30",
+          statusOperacao: "Em Andamento",
+          localAlvo: "Rio Madeira - Cachoeira",
+          localInicio: "Porto Secundário",
+          tempoDuracao: "5 horas",
+          inspetor1: "Andeilsson Amaral",
+          inspetor2: "Kaique Lopes",
+          itensChecklist: {
+            "Teste do motor da embarcação": "SIM",
+            "Mangueira de abastecimento": "NÃO",
+            "Combustível reserva": "SIM",
+            "Âncora": "SIM",
+            "Hélice Reserva": "NÃO",
+            "Doc. Da Embarcação": "SIM",
+            "Óleo náutico": "SIM",
+            "Doc. Do Reboque": "SIM",
+            "Bujão Principal": "SIM",
+            "Remos": "SIM",
+            "Chave ignição": "SIM",
+            "Boia circular": "NÃO",
+            "Coletes salva vidas": "SIM",
+            "Telefone satelital": "SIM",
+            "Cilibrim": "não_preenchido",
+            "Kit basico ferramenta": "SIM",
+            "Corrente com cadeados": "SIM"
+          }
+        },
+        {
+          data: "17/03/2025",
+          hora: "10:00",
+          responsavelNome: "Clemerson Santos De Souza",
+          pilotoNome: "Kaique Lopes Dos Santos",
+          dataOperacao: "18/03/2025",
+          horaOperacao: "08:00",
+          statusOperacao: "Concluído",
+          localAlvo: "Rio Madeira - Foz",
+          localInicio: "Porto Principal",
+          tempoDuracao: "3 horas",
+          inspetor1: "Andeilsson Amaral",
+          inspetor2: "Lucas Cortes",
+          itensChecklist: {
+            "Teste do motor da embarcação": "SIM",
+            "Mangueira de abastecimento": "SIM",
+            "Combustível reserva": "SIM",
+            "Âncora": "SIM",
+            "Hélice Reserva": "SIM",
+            "Doc. Da Embarcação": "SIM",
+            "Óleo náutico": "SIM",
+            "Doc. Do Reboque": "SIM",
+            "Bujão Principal": "SIM",
+            "Remos": "NÃO",
+            "Chave ignição": "SIM",
+            "Boia circular": "SIM",
+            "Coletes salva vidas": "SIM",
+            "Telefone satelital": "SIM",
+            "Cilibrim": "SIM",
+            "Kit basico ferramenta": "SIM",
+            "Corrente com cadeados": "SIM"
+          }
+        }
+      ]
+    };
+
+    // Carregamento inicial
+    document.addEventListener('DOMContentLoaded', function() {
+      // Na versão real com Google Apps Script, você carregaria os dados com:
+      // google.script.run.withSuccessHandler(processarDados).obterDadosChecklist();
+      
+      // Para este exemplo, usaremos os dados de exemplo
+      processarDados(dadosExample);
+    });
+
+    // Função para processar os dados recebidos
+    function processarDados(dados) {
+      console.log('Dados recebidos:', dados);
+      
+      if (!dados || !dados.registros || dados.registros.length === 0) {
+        alert('Nenhum dado disponível para análise');
+        return;
+      }
+      
+      const registros = dados.registros;
+      
+      // Atualizar filtros
+      atualizarFiltros(registros);
+      
+      // Criar análises
+      const analise = analisarDados(registros);
+      
+      // Atualizar visualizações
+      atualizarGraficos(analise);
+      atualizarTabelaPendentes(analise.itensPendentes);
+      atualizarResumo(analise);
+      
+      // Adicionar eventos aos filtros
+      document.getElementById('filtroData').addEventListener('change', () => aplicarFiltros(registros));
+      document.getElementById('filtroPiloto').addEventListener('change', () => aplicarFiltros(registros));
+      document.getElementById('filtroLocal').addEventListener('change', () => aplicarFiltros(registros));
+    }
+    
+    // Função para atualizar os filtros
+    function atualizarFiltros(registros) {
+      // Filtro de data
+      const datas = [...new Set(registros.map(r => r.dataOperacao || r.data))];
+      const selectData = document.getElementById('filtroData');
+      selectData.innerHTML = '<option value="todas">Todas as datas</option>';
+      datas.forEach(data => {
+        const option = document.createElement('option');
+        option.value = data;
+        option.textContent = data;
+        selectData.appendChild(option);
+      });
+      
+      // Filtro de piloto
+      const pilotos = [...new Set(registros.map(r => r.pilotoNome).filter(Boolean))];
+      const selectPiloto = document.getElementById('filtroPiloto');
+      selectPiloto.innerHTML = '<option value="todos">Todos os pilotos</option>';
+      pilotos.forEach(piloto => {
+        const option = document.createElement('option');
+        option.value = piloto;
+        option.textContent = piloto;
+        selectPiloto.appendChild(option);
+      });
+      
+      // Filtro de local
+      const locais = [...new Set(registros.map(r => r.localAlvo).filter(Boolean))];
+      const selectLocal = document.getElementById('filtroLocal');
+      selectLocal.innerHTML = '<option value="todos">Todos os locais</option>';
+      locais.forEach(local => {
+        const option = document.createElement('option');
+        option.value = local;
+        option.textContent = local;
+        selectLocal.appendChild(option);
+      });
+    }
+    
+    // Função para aplicar filtros
+    function aplicarFiltros(registros) {
+      const filtroData = document.getElementById('filtroData').value;
+      const filtroPiloto = document.getElementById('filtroPiloto').value;
+      const filtroLocal = document.getElementById('filtroLocal').value;
+      
+      let registrosFiltrados = [...registros];
+      
+      if (filtroData !== 'todas') {
+        registrosFiltrados = registrosFiltrados.filter(r => 
+          (r.dataOperacao === filtroData) || (r.data === filtroData)
+        );
+      }
+      
+      if (filtroPiloto !== 'todos') {
+        registrosFiltrados = registrosFiltrados.filter(r => r.pilotoNome === filtroPiloto);
+      }
+      
+      if (filtroLocal !== 'todos') {
+        registrosFiltrados = registrosFiltrados.filter(r => r.localAlvo === filtroLocal);
+      }
+      
+      // Atualizar visualizações com dados filtrados
+      const analise = analisarDados(registrosFiltrados);
+      atualizarGraficos(analise);
+      atualizarTabelaPendentes(analise.itensPendentes);
+      atualizarResumo(analise);
+    }
+    
+    // Função para analisar os dados
+    function analisarDados(registros) {
+      // Análise 1: Contagem de inspeções por inspetor
+      const inspecoesPorInspetor = {};
+      registros.forEach(reg => {
+        if (reg.inspetor1) {
+          inspecoesPorInspetor[reg.inspetor1] = (inspecoesPorInspetor[reg.inspetor1] || 0) + 1;
+        }
+        if (reg.inspetor2) {
+          inspecoesPorInspetor[reg.inspetor2] = (inspecoesPorInspetor[reg.inspetor2] || 0) + 1;
+        }
+      });
+      
+      // Análise 2: Locais mais visitados
+      const locaisVisitados = {};
+      registros.forEach(reg => {
+        if (reg.localAlvo) {
+          locaisVisitados[reg.localAlvo] = (locaisVisitados[reg.localAlvo] || 0) + 1;
+        }
+      });
+      
+      // Análise 3: Pilotos mais ativos
+      const pilotosAtivos = {};
+      registros.forEach(reg => {
+        if (reg.pilotoNome) {
+          pilotosAtivos[reg.pilotoNome] = (pilotosAtivos[reg.pilotoNome] || 0) + 1;
+        }
+      });
+      
+      // Análise 4: Itens pendentes por data/missão
+      const itensPendentes = [];
+      registros.forEach(reg => {
+        const dataMissao = reg.dataOperacao || reg.data;
+        
+        for (const [item, status] of Object.entries(reg.itensChecklist)) {
+          if (status === 'NÃO' || status === 'não_preenchido') {
+            itensPendentes.push({
+              data: dataMissao,
+              item: item,
+              status: status,
+              piloto: reg.pilotoNome,
+              local: reg.localAlvo
+            });
+          }
+        }
+      });
+      
+      // Análise 5: Status das operações
+      const statusOperacoes = {};
+      registros.forEach(reg => {
+        if (reg.statusOperacao) {
+          statusOperacoes[reg.statusOperacao] = (statusOperacoes[reg.statusOperacao] || 0) + 1;
+        }
+      });
+      
+      // Análise 6: Horários mais comuns
+      const horariosComuns = {};
+      registros.forEach(reg => {
+        if (reg.horaOperacao) {
+          const horaApenas = reg.horaOperacao.split(':')[0] + 'h';
+          horariosComuns[horaApenas] = (horariosComuns[horaApenas] || 0) + 1;
+        }
+      });
+      
+      // Análise 7: Contagem de itens com problemas por categoria
+      const itensProblematicosPorCategoria = {};
+      registros.forEach(reg => {
+        for (const [item, status] of Object.entries(reg.itensChecklist)) {
+          if (status === 'NÃO' || status === 'não_preenchido') {
+            itensProblematicosPorCategoria[item] = (itensProblematicosPorCategoria[item] || 0) + 1;
+          }
+        }
+      });
+      
+      // Análise 8: Percentual de itens preenchidos corretamente
+      let totalItens = 0;
+      let itensSim = 0;
+      
+      registros.forEach(reg => {
+        for (const status of Object.values(reg.itensChecklist)) {
+          totalItens++;
+          if (status === 'SIM') {
+            itensSim++;
+          }
+        }
+      });
+      
+      const percentualConcluido = totalItens > 0 ? Math.round((itensSim / totalItens) * 100) : 0;
+      
+      return {
+        inspecoesPorInspetor,
+        locaisVisitados,
+        pilotosAtivos,
+        itensPendentes,
+        statusOperacoes,
+        horariosComuns,
+        itensProblematicosPorCategoria,
+        totalChecklists: registros.length,
+        totalPilotos: Object.keys(pilotosAtivos).length,
+        totalLocais: Object.keys(locaisVisitados).length,
+        percentualConcluido
+      };
+    }
+    
+    // Função para atualizar gráficos
+    function atualizarGraficos(analise) {
+      // Gráfico de Inspetores
+      atualizarGraficoBarras('chartInspetores', analise.inspecoesPorInspetor, 'Quantidade de Checklists');
+      
+      // Gráfico de Pilotos
+      atualizarGraficoBarras('chartPilotos', analise.pilotosAtivos, 'Quantidade de Missões');
+      
+      // Gráfico de Locais
+      atualizarGraficoBarras('chartLocais', analise.locaisVisitados, 'Quantidade de Visitas');
+      
+      // Gráfico de Horários
+      atualizarGraficoBarras('chartHorarios', analise.horariosComuns, 'Quantidade de Operações');
+      
+      // Gráfico de Status
+      atualizarGraficoPizza('chartStatus', analise.statusOperacoes);
+      
+      // Gráfico de Itens Problemáticos
+      atualizarGraficoBarrasHorizontal('chartItensProblematicos', analise.itensProblematicosPorCategoria, 'Quantidade de Problemas');
+    }
+    
+    // Função para atualizar tabela de itens pendentes
+    function atualizarTabelaPendentes(itensPendentes) {
+      const tbody = document.querySelector('#tabelaPendentes tbody');
+      tbody.innerHTML = '';
+      
+      if (itensPendentes.length === 0) {
+        const tr = document.createElement('tr');
+        tr.innerHTML = '<td colspan="5" style="text-align: center;">Nenhum item pendente encontrado</td>';
+        tbody.appendChild(tr);
+        return;
+      }
+      
+      itensPendentes.forEach(item => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${item.data || '-'}</td>
+          <td>${item.local || '-'}</td>
+          <td>${item.piloto || '-'}</td>
+          <td>${item.item}</td>
+          <td class="${item.status === 'NÃO' ? 'status-nao' : ''}">${item.status}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+    
+    // Função para atualizar resumo
+    function atualizarResumo(analise) {
+      document.getElementById('totalChecklists').textContent = analise.totalChecklists;
+      document.getElementById('totalPilotos').textContent = analise.totalPilotos;
+      document.getElementById('totalLocais').textContent = analise.totalLocais;
+      document.getElementById('percentualConcluido').textContent = analise.percentualConcluido + '%';
+    }
+    
+    // Função auxiliar para criar gráfico de barras
+    function atualizarGraficoBarras(canvasId, dados, labelY) {
+      const ctx = document.getElementById(canvasId);
+      const chartExists = Chart.getChart(ctx);
+      if (chartExists) {
+        chartExists.destroy();
+      }
+      
+      const labels = Object.keys(dados);
+      const values = Object.values(dados);
+      
+      new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: labels,
+          datasets: [{
+            label: labelY,
+            data: values,
+            backgroundColor: '#4F8A50',
+            borderColor: '#3a6b3b',
+            borderWidth: 1
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+            y: {
+              beginAtZero: true,
+              ticks: {
+                precision: 0
+              }
+            }
+          }
+        }
+      });
+    }
+    
+    // Função auxiliar para criar gráfico de barras horizontal
+    function atualizarGraficoBarrasHorizontal(canvasId, dados, labelX) {
+      const ctx = document.getElementById(canvasId);
+      const chartExists = Chart.getChart(ctx);
+      if (chartExists) {
+        chartExists.destroy();
+      }
+      
+      // Limitar a 10 itens mais problemáticos
+      const sortedEntries = Object.entries(dados).sort((a, b) => b[1] - a[1]).slice(0, 10);
+      const labels = sortedEntries.map(entry => entry[0]);
+      const values = sortedEntries.map(entry => entry[1]);
+      
+      new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: labels,
+          datasets: [{
+            label: labelX,
+            data: values,
+            backgroundColor: '#dc3545',
+            borderColor: '#a71d2a',
+            borderWidth: 1
+          }]
+        },
+        options: {
+          indexAxis: 'y',
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+            x: {
+              beginAtZero: true,
+              ticks: {
+                precision: 0
+              }
+            }
+          }
+        }
+      });
+    }
+    
+    // Função auxiliar para criar gráfico de pizza
+    function atualizarGraficoPizza(canvasId, dados) {
+      const ctx = document.getElementById(canvasId);
+      const chartExists = Chart.getChart(ctx);
+      if (chartExists) {
+        chartExists.destroy();
+      }
+      
+      const labels = Object.keys(dados);
+      const values = Object.values(dados);
+      
+      // Cores para diferentes status
+      const backgroundColors = labels.map(label => {
+        if (label.toLowerCase().includes('pendente')) return '#ffc107';
+        if (label.toLowerCase().includes('andamento')) return '#17a2b8';
+        if (label.toLowerCase().includes('concluído') || label.toLowerCase().includes('concluido')) return '#28a745';
+        return '#6c757d';
+      });
+      
+      new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+          labels: labels,
+          datasets: [{
+            data: values,
+            backgroundColor: backgroundColors,
+            borderWidth: 1
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              position: 'right'
+            }
+          }
+        }
+      });
+    }
+  </script>
+</body>
+</html>
